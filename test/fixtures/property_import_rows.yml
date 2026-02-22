@@ -1,0 +1,21 @@
+# Read about fixtures at https://api.rubyonrails.org/classes/ActiveRecord/FixtureSet.html
+
+one:
+  property_import: one
+  record_type: MyString
+  original_data: 
+  parsed_data: 
+  status: MyString
+  validation_errors: MyText
+  existing_property: one
+  created_property: one
+
+two:
+  property_import: two
+  record_type: MyString
+  original_data: 
+  parsed_data: 
+  status: MyString
+  validation_errors: MyText
+  existing_property: two
+  created_property: two

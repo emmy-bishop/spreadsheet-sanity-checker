@@ -28,7 +28,7 @@ development:
   # To create additional roles in PostgreSQL see `$ createuser --help`.
   # When left blank, PostgreSQL will use the default role. This is
   # the same name as the operating system user running Rails.
-  # username: spreadsheet_sanity_checker
+  username: <%= ENV["DB_USERNAME"] %>
 
   # The password associated with the PostgreSQL role (username).
   password: <%= ENV["DB_PASSWORD"] %>
