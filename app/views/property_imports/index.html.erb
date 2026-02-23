@@ -1,0 +1,35 @@
+<h1>Property Imports</h1>
+
+<% if @imports.any? %>
+  <table style="border-spacing: 10px;">
+    <thead>
+      <tr>
+        <th>Filename</th>
+        <th>Status</th>
+        <th>Uploaded</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @imports.each do |import| %>
+        <tr>
+          <td><%= import.filename %></td>
+          <td><%= import.status %></td>
+          <td><%= time_ago_in_words(import.created_at) %> ago</td>
+          <td>
+            <% if import.previewed? %>
+              <%= link_to "Preview", preview_property_import_path(import) %>
+            <% end %>
+            <% if import.imported? %>
+              <%= link_to "Results", property_import_path(import) %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% else %>
+  <p>No imports yet.</p>
+<% end %>
+
+<p><%= link_to "Return to Upload", new_property_import_path %></p>

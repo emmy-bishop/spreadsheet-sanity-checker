@@ -1,0 +1,53 @@
+<h1>Import Results</h1>
+
+<div class="import-details">
+  <p>Status: <%= @import.status %></p>
+  <% if @import.imported_at.present? %>
+    <p>Imported at: <%= @import.imported_at %></p>
+  <% end %>
+
+  <h2>Summary</h2>
+  <ul>
+    <li>Properties created: <%= @import.properties_created_count %></li>
+    <li>Units created: <%= @import.units_created_count %></li>
+  </ul>
+
+  <h2>Rows</h2>
+  <table style="border-spacing: 10px;">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Building Name</th>
+        <th>Unit Number</th>
+        <th>Status</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @import.property_import_rows.each do |row| %>
+        <tr>
+          <td><%= row.record_type %></td>
+          <td><%= row.building_name %></td>
+          <td><%= row.unit_number %></td>
+          <td><%= row.status %></td>
+          <td>
+            <% if row.created_property.present? %>
+              Created Property #<%= row.created_property_id %>
+            <% elsif row.validation_errors.present? %>
+              Error: <%= row.validation_errors %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+</div>
+
+<% if flash[:notice].present? %>
+  <div>
+    <%= flash[:notice] %>
+  </div>
+<% end %>
+
+<p><%= link_to "Return to Imports", property_imports_path %></p>
+<p><%= link_to "Return to Upload", new_property_import_path %></p>

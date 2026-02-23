@@ -1,0 +1,18 @@
+<h1>Import Property Data</h1>
+
+<%= form_with(model: @import, local: true) do |f| %>
+  <div class="field" style="padding: 10px;">
+    <%= f.label :filename, "Upload a CSV or XLSX file", style: "display: block; margin-bottom: 5px;" %>
+    <%= f.file_field :filename, accept: '.csv,.xlsx', required: true %>
+  </div>
+
+  <div class="actions" style="padding: 10px;">
+    <%= f.submit "Upload and Preview" %>
+  </div>
+<% end %>
+
+<% if flash[:alert].present? %>
+  <div>
+    <%= flash[:alert] %>
+  </div>
+<% end %>
