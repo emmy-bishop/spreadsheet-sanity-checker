@@ -9,6 +9,10 @@ class Property < ApplicationRecord
   # VALIDATION
   validates :building_name, presence: true, uniqueness: true
   validates :street_address, :city, :state, :zip_code, presence: true
+  validates :street_address, uniqueness: {
+    scope: [ :city, :state, :zip_code ],
+    message: "must be unique within the same city, state, and zip code"
+  }
 
   # This list of US states is not the most sophisticated,
   # but our use case is simple, so we can keep it self-contained for max control

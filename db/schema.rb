@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_21_185131) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_23_184335) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -24,6 +24,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_21_185131) do
     t.datetime "updated_at", null: false
     t.string "zip_code", null: false
     t.index ["building_name"], name: "index_properties_on_building_name", unique: true
+    t.index ["street_address", "city", "state", "zip_code"], name: "index_properties_on_full_address", unique: true
   end
 
   create_table "property_import_rows", force: :cascade do |t|
