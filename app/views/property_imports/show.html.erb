@@ -6,35 +6,41 @@
     <p>Imported at: <%= @import.imported_at %></p>
   <% end %>
 
-  <h2>Summary</h2>
-  <ul>
-    <li>Properties created: <%= @import.properties_created_count %></li>
-    <li>Units created: <%= @import.units_created_count %></li>
+  <h2 class="section-title">Summary</h2>
+  <ul class="summary-list">
+    <li><span class="stat-label">Properties created:</span> <span class="stat-value"><%= @import.properties_created_count %></span></li>
+    <li><span class="stat-label">Units created:</span> <span class="stat-value"><%= @import.units_created_count %></span></li>
   </ul>
 
-  <h2>Rows</h2>
-  <table style="border-spacing: 10px;">
+  <h2 class="section-title">Rows</h2>
+  <table class="data-table">
     <thead>
-      <tr>
-        <th>Type</th>
-        <th>Building Name</th>
-        <th>Unit Number</th>
-        <th>Status</th>
-        <th>Result</th>
+      <tr class="table-header">
+        <th class="table-cell">Type</th>
+        <th class="table-cell">Building Name</th>
+        <th class="table-cell">Unit Number</th>
+        <th class="table-cell">Status</th>
+        <th class="table-cell">Result</th>
       </tr>
     </thead>
     <tbody>
       <% @import.property_import_rows.each do |row| %>
         <tr>
-          <td><%= row.record_type %></td>
-          <td><%= row.building_name %></td>
-          <td><%= row.unit_number %></td>
-          <td><%= row.status %></td>
-          <td>
+          <td class="table-cell"><%= row.record_type == "property" ? "Property" : "Unit" %></td>
+          <td class="table-cell"><%= row.building_name %></td>
+          <td class="table-cell"><%= row.unit_number || "--" %></td>
+          <td class="table-cell">
+            <%= row.status.titlecase %>
+          </td>
+          <td class="table-cell">
             <% if row.created_property.present? %>
-              Created Property #<%= row.created_property_id %>
+              <span class="success-text">Created Property #<%= row.created_property_id %></span>
+            <% elsif row.record_type == "unit" %>
+              <span class="success-text">Created Unit</span>
             <% elsif row.validation_errors.present? %>
-              Error: <%= row.validation_errors %>
+              <span class="error-text">Error: <%= row.validation_errors %></span>
+            <% else %>
+              <span class="muted-text">--</span>
             <% end %>
           </td>
         </tr>
@@ -44,10 +50,12 @@
 </div>
 
 <% if flash[:notice].present? %>
-  <div>
+  <div class="flash-notice">
     <%= flash[:notice] %>
   </div>
 <% end %>
 
-<p><%= link_to "Return to Imports", property_imports_path %></p>
-<p><%= link_to "Return to Upload", new_property_import_path %></p>
+<div class="action-bar">
+  <p><%= link_to "← Return to Imports", property_imports_path %></p>
+  <p><%= link_to "← Return to Upload", new_property_import_path %></p>
+</div>

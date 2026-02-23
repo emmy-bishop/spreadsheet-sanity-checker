@@ -1,53 +1,53 @@
 <h1>Import Preview</h1>
 
-<div class="summary" style="background: #f5f5f5; padding: 10px; margin-bottom: 20px;">
+<div class="summary-card">
   <h2>Summary</h2>
   <ul>
     <li><strong>Total rows:</strong> <%= @summary[:total_rows] %></li>
-    <li><strong>Properties:</strong> <%= @summary[:by_record_type][:property] || 0 %></li>
-    <li><strong>Units:</strong> <%= @summary[:by_record_type][:unit] || 0 %></li>
+    <li><strong>Properties:</strong> <%= @summary[:by_record_type]["property"] || 0 %></li>
+    <li><strong>Units:</strong> <%= @summary[:by_record_type]["unit"] || 0 %></li>
     <li><strong>Verified rows:</strong> <%= @summary[:verified_rows] %></li>
     <li><strong>Rejected rows:</strong> <%= @summary[:rejected_rows] %></li>
     <li><strong>New properties:</strong> <%= @summary[:new_properties] %></li>
-    <li><strong>Existing properties:</strong> <%= @summary[:existing_properties] %></li>
+    <li><strong>Properties already in database:</strong> <%= @summary[:existing_properties] || 0 %></li>
   </ul>
 </div>
 
 <% if @summary[:rejected_rows] > 0 %>
-  <div class="errors" style="background: #ffeeee; padding: 20px; margin-bottom: 20px; border: 1px solid #ff0000;">
-    <h2 style="color: red;">⚠ Validation Errors Found</h2>
+  <div class="error-card">
+    <h2 class="error-title">⚠ Validation Errors Found</h2>
     <p>Please fix these issues in your spreadsheet and upload again:</p>
-    <table style="width: 100%; border-collapse: collapse;">
+    <table class="data-table">
       <thead>
-        <tr style="background: #f0f0f0;">
-          <th style="padding: 10px; border: 1px solid #ccc;">Row</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Type</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Building Name</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Unit</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Street Address</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">City</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">State</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Zip</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Errors</th>
+        <tr class="table-header">
+          <th class="table-cell">Row</th>
+          <th class="table-cell">Type</th>
+          <th class="table-cell">Building Name</th>
+          <th class="table-cell">Unit</th>
+          <th class="table-cell">Street Address</th>
+          <th class="table-cell">City</th>
+          <th class="table-cell">State</th>
+          <th class="table-cell">Zip</th>
+          <th class="table-cell">Errors</th>
         </tr>
       </thead>
       <tbody>
         <% @import.property_import_rows.rejected.sort_by { |row| row.original_row_number || Float::INFINITY }.each do |row| %>
           <tr>
-            <td style="padding: 10px; border: 1px solid #ccc; text-align: center; font-weight: bold;">
+            <td class="table-cell text-center font-bold">
               <%= row.original_row_number || "N/A" %>
             </td>
-            <td style="padding: 10px; border: 1px solid #ccc;">
+            <td class="table-cell">
               <%= row.record_type == "property" ? "Property" : "Unit" %>
             </td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.building_name %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.unit_number || "—" %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.street_address %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.city %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.state %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.zip_code %></td>
-            <td style="padding: 10px; border: 1px solid #ccc; color: red;">
-              <ul style="margin: 0; padding-left: 20px;">
+            <td class="table-cell"><%= row.building_name %></td>
+            <td class="table-cell"><%= row.unit_number || "—" %></td>
+            <td class="table-cell"><%= row.street_address %></td>
+            <td class="table-cell"><%= row.city %></td>
+            <td class="table-cell"><%= row.state %></td>
+            <td class="table-cell"><%= row.zip_code %></td>
+            <td class="table-cell error-text">
+              <ul class="error-list">
                 <% row.error_list.each do |error| %>
                   <li><%= error %></li>
                 <% end %>
@@ -61,76 +61,88 @@
 <% end %>
 
 <div class="preview">
-  <%# Filter properties to only show those that will actually change %>
-  <% properties_to_show = @import.property_rows.verified.order(:id).select do |row| %>
-    <%# Keep if:
-       1. It's a new property (will be created), OR
-       2. It's an existing property that has at least one valid unit to import
-    %>
-    <% row.existing_property.blank? || 
-       @import.unit_rows.verified.where("parsed_data->>'building_name' = ?", row.building_name).exists? %>
-  <% end %>
-  <%# Only show the Properties section if there are properties to show %>
-  <% if properties_to_show.any? %>
-    <h2>Properties to Import</h2>
-    <table style="width: 100%; border-collapse: collapse;">
+  <%# Separate properties into new and existing %>
+  <% new_properties = @import.property_rows.verified.where(existing_property_id: nil) %>
+  <% existing_properties = @import.property_rows.verified.where.not(existing_property_id: nil) %>
+
+  <%# New Properties Section - only show if there are new properties %>
+  <% if new_properties.any? %>
+    <h2>New Properties to Create</h2>
+    <table class="data-table mb-30">
       <thead>
-        <tr style="background: #f0f0f0;">
-          <th style="padding: 10px; border: 1px solid #ccc;">Status</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Building Name</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Type</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Street Address</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">City</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">State</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Zip</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">New Units</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Total Units</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Action</th>
+        <tr class="table-header-success">
+          <th class="table-cell">Building Name</th>
+          <th class="table-cell">Type</th>
+          <th class="table-cell">Street Address</th>
+          <th class="table-cell">City</th>
+          <th class="table-cell">State</th>
+          <th class="table-cell">Zip</th>
+          <th class="table-cell">Units to Import</th>
         </tr>
       </thead>
       <tbody>
-        <% properties_to_show.each do |row| %>
-          <% is_existing = row.existing_property.present? %>
+        <% new_properties.each do |row| %>
           <% new_unit_count = @import.unit_rows
                 .verified
                 .where("parsed_data->>'building_name' = ?", row.building_name)
                 .count %>
-          <%# Calculate total units (DB + new import) %>
-          <% existing_unit_count = is_existing ? row.existing_property.units.count : 0 %>
+          <% property_type = new_unit_count > 1 ? "Multi-Family" : "Single-Family" %>
+          <tr>
+            <td class="table-cell"><%= row.building_name %></td>
+            <td class="table-cell"><%= property_type %></td>
+            <td class="table-cell"><%= row.street_address %></td>
+            <td class="table-cell"><%= row.city %></td>
+            <td class="table-cell"><%= row.state %></td>
+            <td class="table-cell"><%= row.zip_code %></td>
+            <td class="table-cell text-center font-bold success-text">
+              <%= property_type == "Multi-Family" ? new_unit_count : '--' %>
+            </td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <%# Existing Properties Section - only show if there are existing properties with new units %>
+  <% existing_with_units = existing_properties.select do |row| 
+       @import.unit_rows.verified.where("parsed_data->>'building_name' = ?", row.building_name).exists?
+     end %>
+
+  <% if existing_with_units.any? %>
+    <h2>Existing Properties (will receive new units)</h2>
+    <table class="data-table mb-30">
+      <thead>
+        <tr class="table-header-success">
+          <th class="table-cell">Building Name</th>
+          <th class="table-cell">Street Address</th>
+          <th class="table-cell">City</th>
+          <th class="table-cell">State</th>
+          <th class="table-cell">Zip</th>
+          <th class="table-cell">New Units</th>
+          <th class="table-cell">Total Units</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% existing_with_units.each do |row| %>
+          <% new_unit_count = @import.unit_rows
+                .verified
+                .where("parsed_data->>'building_name' = ?", row.building_name)
+                .count %>
+          <% existing_unit_count = row.existing_property.units.count %>
           <% total_unit_count = existing_unit_count + new_unit_count %>
-          <%# Determine property type based on TOTAL units after import %>
-          <% property_type = total_unit_count > 0 ? "Multi-Family" : "Single-Family" %>
-          <tr style="<%= 'background: #ffeeee;' if row.rejected? %>">
-            <td style="padding: 10px; border: 1px solid #ccc;">
-              <%= is_existing ? "Existing" : row.status.titleize %>
+          <% property_type = total_unit_count > 1 ? "Multi-Family" : "Single-Family" %>
+          <tr>
+            <td class="table-cell"><%= row.building_name %> (<%= property_type %>)</td>
+            <td class="table-cell"><%= row.street_address %></td>
+            <td class="table-cell"><%= row.city %></td>
+            <td class="table-cell"><%= row.state %></td>
+            <td class="table-cell"><%= row.zip_code %></td>
+            <td class="table-cell text-center font-bold success-text">
+              <%= new_unit_count %>
             </td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.building_name %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;">
-              <span>
-                <%= property_type %>
-              </span>
-            </td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.street_address %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.city %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.state %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.zip_code %></td>
-            <td style="padding: 10px; border: 1px solid #ccc; text-align: center; font-weight: bold; color: #4CAF50;">
-              <%= new_unit_count > 0 ? new_unit_count : "--" %>
-            </td>
-            <td style="padding: 10px; border: 1px solid #ccc; text-align: center;">
-              <%= total_unit_count > 0 ? total_unit_count : "--" %>
-              <% if existing_unit_count > 0 %>
-                <span style="font-size: 0.85em; color: #666;">(<%= existing_unit_count %> existing)</span>
-              <% end %>
-            </td>
-            <td style="padding: 10px; border: 1px solid #ccc;">
-              <strong>
-                <% if is_existing %>
-                  <span style="color: #2196F3;">Will update unit data</span>
-                <% else %>
-                  <span style="color: #4CAF50;">Will be created</span>
-                <% end %>
-              </strong>
+            <td class="table-cell text-center">
+              <%= total_unit_count %>
+              <span class="unit-count-note">(<%= existing_unit_count %> existing)</span>
             </td>
           </tr>
         <% end %>
@@ -141,21 +153,56 @@
   <%# Units section - only show if there are verified units %>
   <% verified_units = @import.unit_rows.verified %>
   <% if verified_units.any? %>
-    <h2 style="margin-top: 30px;">Units to Import</h2>
-    <table style="width: 100%; border-collapse: collapse;">
+    <h2 class="mt-30">Units to Import</h2>
+    <table class="data-table">
       <thead>
-        <tr style="background: #f0f0f0;">
-          <th style="padding: 10px; border: 1px solid #ccc;">Status</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Building Name</th>
-          <th style="padding: 10px; border: 1px solid #ccc;">Unit Number</th>
+        <tr class="table-header-success">
+          <th class="table-cell">Building Name</th>
+          <th class="table-cell">Unit Number</th>
         </tr>
       </thead>
       <tbody>
         <% verified_units.order(:id).each do |row| %>
           <tr>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.status.titleize %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.building_name %></td>
-            <td style="padding: 10px; border: 1px solid #ccc;"><%= row.unit_number %></td>
+            <td class="table-cell"><%= row.building_name %></td>
+            <td class="table-cell"><%= verified_units.count > 0 ? row.unit_number : '--' %></td>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% end %>
+
+  <%# Already Existing Section - properties already in DB with no new units %>
+  <% existing_without_units = existing_properties.select do |row| 
+       !@import.unit_rows.verified.where("parsed_data->>'building_name' = ?", row.building_name).exists?
+     end %>
+
+  <% if existing_without_units.any? %>
+    <h2>Properties Already in Database (no changes)</h2>
+    <table class="data-table mb-30">
+      <thead>
+        <tr class="table-header">
+          <th class="table-cell">Building Name</th>
+          <th class="table-cell">Street Address</th>
+          <th class="table-cell">City</th>
+          <th class="table-cell">State</th>
+          <th class="table-cell">Zip</th>
+          <th class="table-cell">Existing Units</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% existing_without_units.each do |row| %>
+          <% existing_unit_count = row.existing_property.units.count %>
+          <% property_type = existing_unit_count > 1 ? "Multi-Family" : "Single-Family" %>
+          <tr>
+            <td class="table-cell"><%= row.building_name %> (<%= property_type %>)</td>
+            <td class="table-cell"><%= row.street_address %></td>
+            <td class="table-cell"><%= row.city %></td>
+            <td class="table-cell"><%= row.state %></td>
+            <td class="table-cell"><%= row.zip_code %></td>
+            <td class="table-cell text-center">
+              <%= property_type == "Multi-Family" ? existing_unit_count : '--' %>
+            </td>
           </tr>
         <% end %>
       </tbody>
@@ -163,22 +210,26 @@
   <% end %>
 
   <%# Show a message if nothing will be imported %>
-  <% if properties_to_show.empty? && verified_units.empty? %>
-    <div style="background: #fff3cd; padding: 20px; margin-top: 20px; border: 1px solid #ffc107; border-radius: 4px;">
-      <h3 style="color: #856404; margin-top: 0;">✕ No Changes to Import</h3>
-      <p>No new properties will be created and no valid units were found to import.</p>
-      <p style="margin-bottom: 0;">Please check for validation errors above or upload a different file.</p>
+  <% if new_properties.empty? && existing_with_units.empty? && verified_units.empty? %>
+    <div class="warning-card">
+      <h3 class="warning-title">No Changes to Import</h3>
+      <p>No new properties will be created and no new units will be added.</p>
+      <% if existing_without_units.any? %>
+        <p><%= existing_without_units.count %> property(s) already exist in the database with matching data.</p>
+      <% end %>
+      <p class="mb-0">Please upload a different file if you intended to add new data.</p>
     </div>
   <% end %>
 </div>
-<div style="margin-top: 30px;">
-  <% if @summary[:verified_rows] > 0 && @summary[:rejected_rows] == 0 && @summary[:new_properties] > 0 %>
+
+<div class="action-bar">
+  <% if @summary[:verified_rows] > 0 && @summary[:rejected_rows] == 0 && (new_properties.any? || existing_with_units.any?) %>
     <%= button_to "✓ Confirm and Import #{@summary[:verified_rows]} rows", 
                   execute_property_import_path(@import), 
                   method: :post,
-                  style: "background: #4CAF50; color: white; padding: 15px 32px; font-size: 16px; border: none; cursor: pointer;"%>
+                  class: "btn btn-success btn-large" %>
   <% elsif @summary[:rejected_rows] > 0 %>
-    <p style="color: red; font-weight: bold;">Please fix validation errors before importing.</p>
+    <p class="error-message">Please fix validation errors before importing.</p>
   <% end %>
-  <%= link_to "← Cancel and return to upload", new_property_import_path, style: "margin-left: 20px;" %>
+  <%= link_to "← Cancel and return to upload", new_property_import_path %>
 </div>
