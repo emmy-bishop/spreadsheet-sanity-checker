@@ -1,4 +1,4 @@
-class CsvProcessorService
+class CsvProcessingService
   include DataCleaner
   include ImportConfig
 
@@ -61,13 +61,7 @@ class CsvProcessorService
     #   6. Clean up temp file
     # Returns: Array of row hashes with :data and :row_number
     def parse_file
-      temp_file = Tempfile.new([ "import", File.extname(file.original_filename) ])
-      temp_file.binmode
-      file.rewind
-      temp_file.write(file.read)
-      temp_file.rewind
-
-      spreadsheet = Roo::Spreadsheet.open(temp_file.path)
+      spreadsheet = Roo::Spreadsheet.open(file.path)
 
       headers = spreadsheet.row(1).map(&:to_s).map(&:strip)
       rows = []
@@ -89,14 +83,7 @@ class CsvProcessorService
         end
       end
 
-      temp_file.close
-      temp_file.unlink
-
       rows
-    rescue => e
-        temp_file&.close
-        temp_file&.unlink
-        raise "Error parsing file: #{e.message}"
     end
 
     # Purpose: Ensures all required headers are present in the import file
@@ -216,9 +203,11 @@ class CsvProcessorService
     # Steps:
     #   1. Check for required fields
     #   2. Validate state format
-    #   3. Check for building name conflicts (database and import)
-    #   4. Check for address conflicts (if no building name conflict)
-    #   5. Update row with errors
+    #   3. Check for exact database match
+    #   4. Check for building name conflicts (database and import)
+    #   5. Check for address conflicts (if no building name conflict)
+    #   6. Update row with errors
+    #
     def validate_property_row(row)
       errors = []
       data = row.parsed_data
@@ -226,12 +215,17 @@ class CsvProcessorService
       add_required_field_errors(errors, data)
       add_state_validation_error(errors, data)
 
-      # Check for building name conflicts (these are more comprehensive)
+      # Check for exact database match first
       if data[ParsedKeys::BUILDING_NAME].present?
-        check_database_building_name_conflict(row, data, errors)
-        check_import_building_name_conflict(row, data, errors)
-      end
+        # Check for exact database match first
+        exact_match_found = check_exact_database_match(row, data, errors)
 
+        # Only check conflicts if no exact match was found
+        unless exact_match_found
+          check_database_building_name_conflict(row, data, errors)
+          check_import_building_name_conflict(row, data, errors)
+        end
+      end
       # Only check address conflicts if no building name conflict was found
       if errors.none? { |e| e.include?("'#{data[ParsedKeys::BUILDING_NAME]}'") }
         check_database_address_conflict(row, data, errors)
@@ -291,6 +285,33 @@ class CsvProcessorService
       if state.present? && !US_STATES.include?(state)
         errors << "'#{state}' is not a valid US state"
       end
+    end
+
+    # ==================================================
+    # VALIDATION HELPERS - EXACT DATABASE MATCH
+    # ==================================================
+
+    # Purpose: Checks if a property with exact matching data already exists in database
+    # Steps:
+    #   1. Look for property with same building name AND all address fields
+    #   2. If found, mark the row as existing_property (no errors, this is valid)
+    #   3. Returns true if match found, false otherwise
+    def check_exact_database_match(row, data, errors)
+      existing = Property.find_by(
+        building_name: data[ParsedKeys::BUILDING_NAME],
+        street_address: data[ParsedKeys::STREET_ADDRESS],
+        city: data[ParsedKeys::CITY],
+        state: data[ParsedKeys::STATE],
+        zip_code: data[ParsedKeys::ZIP_CODE]
+      )
+
+      if existing
+        row.update(existing_property: existing)
+        # No errors -- this is a valid case
+        return true
+      end
+
+      false
     end
 
     # ==================================================
@@ -364,6 +385,9 @@ class CsvProcessorService
     #   1. Find property with exact address match
     #   2. If found and building names differ, add conflict error
     def check_database_address_conflict(row, data, errors)
+      # Skip if this row already has an exact match (handled earlier)
+      return if row.existing_property.present?
+
       existing = Property.find_by(
         street_address: data[ParsedKeys::STREET_ADDRESS],
         city: data[ParsedKeys::CITY],
@@ -470,7 +494,6 @@ class CsvProcessorService
       end
     end
 
-
     # Purpose: Handles duplicate unit checks
     # Steps:
     #   1. Check for duplicate in import
@@ -564,11 +587,12 @@ class CsvProcessorService
           address: property_row.parsed_data[ParsedKeys::STREET_ADDRESS],
           city: property_row.parsed_data[ParsedKeys::CITY],
           state: property_row.parsed_data[ParsedKeys::STATE],
+          zip: property_row.parsed_data[ParsedKeys::ZIP_CODE],
           unit_count: units,
           is_new: property_row.existing_property_id.nil?
         }
       end
-      Rails.logger.debug("Property breakdown: #{breakdown.inspect}")
+
       breakdown
     end
 
