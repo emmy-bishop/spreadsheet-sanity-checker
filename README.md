@@ -2,8 +2,6 @@
 
 A small Rails application for uploading and validating spreadsheets (CSV / Excel) and importing property & unit data.
 
----
-
 ## Quick links
 - Routes: [`config/routes.rb`](config/routes.rb)
 - Database config: [`config/database.yml`](config/database.yml)
@@ -68,6 +66,8 @@ Open http://localhost:4000 (or your custom port) and the app root (property_impo
 - File parsing and cleaning: [`CsvProcessingService`](app/services/csv_processing_service.rb)
 - Adding new property / unit records to database: [`ImportTransactionService`](app/services/import_transaction_service.rb)
 
+---
+
 ## Duplicate Properties
 
 - Each [`Property`](app/models/property.rb) is identified by its unique `building_name` -- no two properties can share the same name, even at different addresses.
@@ -92,6 +92,8 @@ Open http://localhost:4000 (or your custom port) and the app root (property_impo
 | Completely new building + new address | Valid - Will create new property | No matching name or address in system
 | Missing one or more of: Building Name, Street Address, City, State, ZIP Code | Error - Missing required field(s) | "Ave Apts" at [blank address]
 
+---
+
 ## Additional Assumptions
 - All `Properties` will be located in the US.
 - Uploaded spreadsheets will always be in the same format (although minimal handling for the alternative scenario does exist in [`CsvProcessingService`](app/services/csv_processing_service.rb)'s `validate_headers()`).
@@ -100,6 +102,8 @@ Open http://localhost:4000 (or your custom port) and the app root (property_impo
     2. Actual imports
 
     from the database. However, the ability to view records of past imports is OK.
+
+---
 
 ## Tradeoffs
 ### Strict Validation vs Ease of Use
@@ -130,6 +134,8 @@ Unfortunately, more involved errors (e.g. a typo in a state name) are not auto-c
     - File processing with Roo - The [`CsvProcessingService`](app/services/csv_processing_service.rb) uses the Roo gem to parse uploaded spreadsheets. Roo reads directly from the uploaded file's tempfile location (via file.path), avoiding unnecessary file I/O operations. This approach:
         - Uses Rails' built-in file upload handling (no custom tempfile management)
         - Supports CSV, Excel (.xlsx), and OpenOffice (.ods) formats
+
+---
 
 ## Potential Improvements
 - For consistency and clarity, properties designated as "single-family" may benefit from the creation of associated `Unit` entries (perhaps with a specific `unit_number` like "SF"). The handling of "single-family" vs "multi-family" could also stand to be more robust in general. For example, right now, if there were:
