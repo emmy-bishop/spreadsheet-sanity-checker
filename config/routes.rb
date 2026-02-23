@@ -10,5 +10,12 @@ Rails.application.routes.draw do
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
   # Defines the root path route ("/")
-  # root "posts#index"
+  root "property_imports#new"
+
+  resources :property_imports do
+    member do # For a specific import,
+      get :preview # Show preview
+      post :execute # Finalize & add records to db
+    end
+  end
 end
