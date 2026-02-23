@@ -1,30 +1,49 @@
 class PropertyImportsController < ApplicationController
   before_action :set_import, only: [ :show, :preview, :execute, :destroy ]
 
+  # ==================================================
+  # INDEX
+  # ==================================================
+  # Purpose: Display a list of all previous imports
+  # Steps:
+  #   1. Fetch all imports ordered by most recent first
+  #   2. Render index view with @imports collection
   def index
     @imports = PropertyImport.order(created_at: :desc)
   end
 
+  # ==================================================
+  # NEW
+  # ==================================================
+  # Purpose: Render the upload form for a new import
+  # Steps:
+  #   1. Create empty PropertyImport object for the form
+  #   2. Render new view with form
   def new
-    # Create new PropertyImport (to be populated with spreadsheet values)
     @import = PropertyImport.new
   end
 
+  # ==================================================
+  # CREATE
+  # ==================================================
+  # Purpose: Handle file upload, process CSV, and show preview or errors
+  # Steps:
+  #   1. Create new PropertyImport with form params
+  #   2. Check if file was provided
+  #   3. Save filename and create import record
+  #   4. Process file with CsvProcessorService
+  #   5. On success: redirect to preview page
+  #   6. On failure: show errors and re-render upload form
   def create
-    # User submitted spreadsheet, populate PropertyImport with values from file
     @import = PropertyImport.new(import_params)
 
-    # Handle file upload
     if params[:property_import][:filename].present?
       uploaded_file = params[:property_import][:filename]
       @import.filename = uploaded_file.original_filename
 
-      # Save the import first
       if @import.save
-        # Pass the uploaded file for processing
-        service = CsvProcessorService.new(@import, uploaded_file)
+        service = CsvProcessingService.new(@import, uploaded_file)
 
-        # On success, redirect to preview
         if service.process
           redirect_to preview_property_import_path(@import)
         else
@@ -41,20 +60,33 @@ class PropertyImportsController < ApplicationController
     end
   end
 
+  # ==================================================
+  # PREVIEW
+  # ==================================================
+  # Purpose: Show user a preview of what will be imported
+  # Steps:
+  #   1. Generate summary statistics from import rows
+  #   2. Fetch all property rows for display
+  #   3. Fetch all unit rows for display
+  #   4. Render preview view with all data
   def preview
-    # Processing succeeded -- show preview of data to be imported w/ stats
     @summary = @import.summary_stats
-    # as well as lists of unique properties & unique units
     @property_rows = @import.property_import_rows.property.order(:id)
     @unit_rows = @import.property_import_rows.unit.order(:id)
   end
 
+  # ==================================================
+  # EXECUTE
+  # ==================================================
+  # Purpose: User confirmed preview, now actually import to database
+  # Steps:
+  #   1. Initialize ImportTransactionService with the import
+  #   2. Attempt to execute the import transaction
+  #   3. On success: redirect to show page with results
+  #   4. On failure: redirect back to preview with errors
   def execute
-    # User previewed import, found no validation errors, and hit submit
-    # So start adding finalized db records
     service = ImportTransactionService.new(@import)
 
-    # On success, redirect to import summary page
     if service.execute
       redirect_to property_import_path(@import)
     else
@@ -63,13 +95,25 @@ class PropertyImportsController < ApplicationController
     end
   end
 
+  # ==================================================
+  # SHOW
+  # ==================================================
+  # Purpose: Display results of a completed import
+  # Steps:
+  #   1. Generate summary statistics
+  #   2. Render show view with import results
   def show
     @summary = @import.summary_stats
   end
 
-  # This is currently unlinked in the UI because it should only be accessible to admin users,
-  # but could allow for deleting an import record if needed
-  # (e.g. if they want to re-upload a file with the same name)
+  # ==================================================
+  # DESTROY
+  # ==================================================
+  # Purpose: Delete an import record (admin only)
+  # Note: Currently unlinked in UI - for admin use only
+  # Steps:
+  #   1. Delete the import record (cascades to import rows)
+  #   2. Redirect to imports list with success message
   def destroy
     @import.destroy
     redirect_to property_imports_path, notice: "Import record deleted"

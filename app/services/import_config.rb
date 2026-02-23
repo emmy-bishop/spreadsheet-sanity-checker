@@ -1,4 +1,5 @@
 module ImportConfig
+  # This module defines the headers used in the import process
   module Headers
     BUILDING_NAME = "Building Name".freeze
     STREET_ADDRESS = "Street Address".freeze
@@ -19,6 +20,7 @@ module ImportConfig
     }.freeze
   end
 
+  # This module defines the keys used in the parsed data
   module ParsedKeys
     BUILDING_NAME = "building_name".freeze
     STREET_ADDRESS = "street_address".freeze
