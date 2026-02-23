@@ -88,8 +88,8 @@ production:
   primary: &primary_production
     <<: *default
     database: spreadsheet_sanity_checker_production
-    username: spreadsheet_sanity_checker
-    password: <%= ENV["SPREADSHEET_SANITY_CHECKER_DATABASE_PASSWORD"] %>
+    username: <%= ENV["DB_USERNAME"] %>
+    password: <%= ENV["DB_PASSWORD"] %>
   cache:
     <<: *primary_production
     database: spreadsheet_sanity_checker_production_cache
