@@ -31,7 +31,7 @@ module DataCleaner
 
   def clean_building_name(value)
     return nil if value.blank?
-    
+
     clean_text(value)
       .to_s
       .gsub(/\s+(Apt|Unit|#).*$/i, "")
@@ -41,7 +41,7 @@ module DataCleaner
 
   def clean_unit_number(value)
     return nil if value.blank?
-    
+
     value.to_s
          .strip
          .gsub(/\.0+$/, "") # Remove .0 from Excel numbers
@@ -54,7 +54,7 @@ module DataCleaner
 
   def clean_zip_code(value)
     return nil if value.blank?
-    
+
     value.to_s
          .strip
          .gsub(/\.0+$/, "") # Remove .0 from Excel numbers
