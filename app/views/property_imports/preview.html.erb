@@ -21,7 +21,6 @@
       <thead>
         <tr class="table-header">
           <th class="table-cell">Row</th>
-          <th class="table-cell">Type</th>
           <th class="table-cell">Building Name</th>
           <th class="table-cell">Unit</th>
           <th class="table-cell">Street Address</th>
@@ -36,9 +35,6 @@
           <tr>
             <td class="table-cell text-center font-bold">
               <%= row.original_row_number || "N/A" %>
-            </td>
-            <td class="table-cell">
-              <%= row.record_type == "property" ? "Property" : "Unit" %>
             </td>
             <td class="table-cell"><%= row.building_name %></td>
             <td class="table-cell"><%= row.unit_number || "—" %></td>
@@ -86,7 +82,7 @@
                 .verified
                 .where("parsed_data->>'building_name' = ?", row.building_name)
                 .count %>
-          <% property_type = new_unit_count > 1 ? "Multi-Family" : "Single-Family" %>
+          <% property_type = new_unit_count > 0 ? "Multi-Family" : "Single-Family" %>
           <tr>
             <td class="table-cell"><%= row.building_name %></td>
             <td class="table-cell"><%= property_type %></td>
@@ -130,7 +126,7 @@
                 .count %>
           <% existing_unit_count = row.existing_property.units.count %>
           <% total_unit_count = existing_unit_count + new_unit_count %>
-          <% property_type = total_unit_count > 1 ? "Multi-Family" : "Single-Family" %>
+          <% property_type = total_unit_count > 0 ? "Multi-Family" : "Single-Family" %>
           <tr>
             <td class="table-cell"><%= row.building_name %> (<%= property_type %>)</td>
             <td class="table-cell"><%= row.street_address %></td>
