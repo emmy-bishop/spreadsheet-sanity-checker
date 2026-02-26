@@ -31,20 +31,35 @@
         </tr>
       </thead>
       <tbody>
-        <% @import.property_import_rows.rejected.sort_by { |row| row.original_row_number || Float::INFINITY }.each do |row| %>
+        <%# Group rejected rows by original row number %>
+        <% @import.property_import_rows.rejected
+              .sort_by { |row| row.original_row_number || Float::INFINITY }
+              .group_by(&:original_row_number)
+              .each do |row_number, rows| %>
+
+          <%# Use the first row for display data (all rows from same original have same data) %>
+          <% first_row = rows.first %>
+          <% all_errors = rows.flat_map(&:error_list).uniq %>
+
           <tr>
             <td class="table-cell text-center font-bold">
-              <%= row.original_row_number || "N/A" %>
+              <%= row_number || "N/A" %>
             </td>
-            <td class="table-cell"><%= row.building_name %></td>
-            <td class="table-cell"><%= row.unit_number || "—" %></td>
-            <td class="table-cell"><%= row.street_address %></td>
-            <td class="table-cell"><%= row.city %></td>
-            <td class="table-cell"><%= row.state %></td>
-            <td class="table-cell"><%= row.zip_code %></td>
+            <td class="table-cell"><%= first_row.building_name %></td>
+            <td class="table-cell">
+              <% if rows.any?(&:unit?) %>
+                <%= rows.select(&:unit?).map(&:unit_number).join(", ") %>
+              <% else %>
+                —
+              <% end %>
+            </td>
+            <td class="table-cell"><%= first_row.street_address %></td>
+            <td class="table-cell"><%= first_row.city %></td>
+            <td class="table-cell"><%= first_row.state %></td>
+            <td class="table-cell"><%= first_row.zip_code %></td>
             <td class="table-cell error-text">
               <ul class="error-list">
-                <% row.error_list.each do |error| %>
+                <% all_errors.each do |error| %>
                   <li><%= error %></li>
                 <% end %>
               </ul>
