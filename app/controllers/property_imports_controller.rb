@@ -31,7 +31,7 @@ class PropertyImportsController < ApplicationController
   #   1. Create new PropertyImport with form params
   #   2. Check if file was provided
   #   3. Save filename and create import record
-  #   4. Process file with CsvProcessorService
+  #   4. Process file with CsvProcessingService
   #   5. On success: redirect to preview page
   #   6. On failure: show errors and re-render upload form
   def create

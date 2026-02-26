@@ -53,12 +53,10 @@ class CsvProcessingService
 
     # Purpose: Reads and parses the uploaded CSV/Excel file
     # Steps:
-    #   1. Create temp file from upload
-    #   2. Open spreadsheet with Roo
-    #   3. Extract headers from first row
-    #   4. Iterate through remaining rows, building data hashes
-    #   5. Filter out empty rows
-    #   6. Clean up temp file
+    #   1. Open spreadsheet with Roo
+    #   2. Extract headers from first row
+    #   3. Iterate through remaining rows, building data hashes
+    #   4. Filter out empty rows
     # Returns: Array of row hashes with :data and :row_number
     def parse_file
       spreadsheet = Roo::Spreadsheet.open(file.path)
@@ -68,13 +66,14 @@ class CsvProcessingService
 
       (2..spreadsheet.last_row).each do |i|
         row_data = {}
-        row = spreadsheet.row(i)
+        row = spreadsheet.row(i) # Get the current row's values as an array
 
         headers.each_with_index do |header, index|
-          value = row[index]
-          row_data[header] = value.to_s.strip if header.present?
+          value = row[index] # Get value for the current header
+          row_data[header] = value.to_s.strip if header.present? # Add data to hash (ex. row_data["City"] => "Seattle")
         end
 
+        # If row has any data, add it to rows array
         if row_data.values.any?(&:present?)
           rows << {
             data: row_data,
@@ -94,6 +93,7 @@ class CsvProcessingService
     def validate_headers!(first_row)
       return unless first_row
 
+      # Allow data to be passed regardless of whether it is coming directly from the spreadsheet or has already been mapped
       row_data = first_row.is_a?(Hash) && first_row.key?(:data) ? first_row[:data] : first_row
 
       headers = row_data.keys.compact.map(&:to_s).map(&:strip)
@@ -116,7 +116,7 @@ class CsvProcessingService
     def create_import_rows(data_rows)
       building_data = data_rows
         .group_by { |item|
-          [
+          [ # Group all rows that share the same building name / full address combo
             clean_building_name(item[:data][Headers::BUILDING_NAME]),
             clean_street_address(item[:data][Headers::STREET_ADDRESS]),
             clean_city(item[:data][Headers::CITY]),
@@ -124,10 +124,10 @@ class CsvProcessingService
             clean_zip_code(item[:data][Headers::ZIP_CODE])
           ].compact.join("|")
         }
-        .transform_values(&:first)
+        .transform_values(&:first) # Get only the first row for each building
 
-      create_property_rows(building_data)
-      create_unit_rows(data_rows)
+      create_property_rows(building_data) # Each unique building gets a property row
+      create_unit_rows(data_rows) # Each unit gets a unit row
     end
 
     # Purpose: Creates property-type import rows for each unique building
@@ -161,9 +161,9 @@ class CsvProcessingService
       original_row_number = item[:row_number]
 
       import.property_import_rows.create!(
-        record_type: record_type,
-        original_data: row_data.merge("_original_row" => original_row_number),
-        parsed_data: build_parsed_data(record_type, row_data),
+        record_type: record_type, # Property or Unit
+        original_data: row_data.merge("_original_row" => original_row_number), # Add original data, incl. original row # from .csv
+        parsed_data: build_parsed_data(record_type, row_data), # Add cleaned/standardized data
         status: :pending
       )
     end
@@ -195,6 +195,7 @@ class CsvProcessingService
     #   1. Validate all property rows
     #   2. Validate all unit rows
     def validate_rows
+      # find_each loads records in batches (default batch size = 1000) instead of all at once
       import.property_import_rows.properties.find_each { |row| validate_property_row(row) }
       import.property_import_rows.units.find_each { |row| validate_unit_row(row) }
     end
@@ -205,31 +206,30 @@ class CsvProcessingService
     #   2. Validate state format
     #   3. Check for exact database match
     #   4. Check for building name conflicts (database and import)
-    #   5. Check for address conflicts (if no building name conflict)
+    #   5. Check for address conflicts (database and import)
     #   6. Update row with errors
-    #
     def validate_property_row(row)
       errors = []
       data = row.parsed_data
 
+      # Basic validations -- Always run these first
       add_required_field_errors(errors, data)
       add_state_validation_error(errors, data)
 
-      # Check for exact database match first
       if data[ParsedKeys::BUILDING_NAME].present?
-        # Check for exact database match first
+        # Does this property already exist in database? (same name + full address)
+        # If so, assume it's valid
         exact_match_found = check_exact_database_match(row, data, errors)
 
-        # Only check conflicts if no exact match was found
+        # If property is new (no exact match), check for conflicts
         unless exact_match_found
+          # Ensure building name is unique
           check_database_building_name_conflict(row, data, errors)
           check_import_building_name_conflict(row, data, errors)
+          # Ensure address is unique
+          check_database_address_conflict(row, data, errors)
+          check_import_address_conflict(row, data, errors)
         end
-      end
-      # Only check address conflicts if no building name conflict was found
-      if errors.none? { |e| e.include?("'#{data[ParsedKeys::BUILDING_NAME]}'") }
-        check_database_address_conflict(row, data, errors)
-        check_import_address_conflict(row, data, errors)
       end
 
       row.update_status_and_errors(errors)
@@ -325,8 +325,6 @@ class CsvProcessingService
     def check_database_building_name_conflict(row, data, errors)
       existing = Property.find_by(building_name: data[ParsedKeys::BUILDING_NAME])
       return unless existing
-
-      row.update(existing_property: existing)
 
       if addresses_differ?(existing, data)
         existing_address = "#{existing.street_address}, #{existing.city}, #{existing.state} #{existing.zip_code}"
