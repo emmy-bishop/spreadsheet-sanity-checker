@@ -15,11 +15,11 @@ class PropertyImport < ApplicationRecord
   scope :recent, -> { order(created_at: :desc) }
 
   # METHODS
-  def property_rows # Rows representing unique buildings (set in FileImportService/create_import_rows())
+  def property_rows # Rows representing unique buildings (set in CsvProcessingService/create_import_rows())
     property_import_rows.properties
   end
 
-  def unit_rows # Rows representing unique units (set in FileImportService/create_import_rows())
+  def unit_rows # Rows representing unique units (set in CsvProcessingService/create_import_rows())
     property_import_rows.units
   end
 
